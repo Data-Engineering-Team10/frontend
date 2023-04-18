@@ -2,7 +2,7 @@ import streamlit as st
 import base64
 import numpy as np
 import pandas as pd
-from sqlalchemy import create_engine
+import psycopg2
 
 
 st.set_page_config(
@@ -13,24 +13,46 @@ st.set_page_config(
 )
 
 
-# Initialize connection.
-# Uses st.cache_resource to only run once.
+# Initialize connection. Uses st.cache_resource to only run once.
 @st.cache_resource
 def init_connection():
-    config = st.secrets["postgres"]
-    host = config["host"]
-    port = config["port"]
-    dbname = config["dbname"]
-    user = config["user"]
-    password = config["password"]
-    return create_engine(f"postgresql://{user}:{password}@{host}:{port}/{dbname}")
+    return psycopg2.connect(**st.secrets["postgres"])
 
 
 # Perform query.
-# Uses st.cache_data to only rerun when the query changes or after 10 min.
-@st.cache_data(ttl=600)
-def run_query(query, _conn):
-    return pd.read_sql_query(query, _conn)
+def select_table(table_name, column_list=None, where_dict=None, order_by=None):
+    if column_list is None:
+        column_clause = "*"
+    else:
+        column_clause = ", ".join(column_list)
+
+    query = f"SELECT {column_clause} FROM {table_name}"
+    values = []
+
+    if where_dict is not None:
+        where_clause = " AND ".join([f"{k} = %s" for k in where_dict.keys()])
+        query += f" WHERE {where_clause}"
+        values = list(where_dict.values())
+
+    if order_by is not None:
+        query += f" ORDER BY {order_by}"
+
+    with conn.cursor() as cur:
+        cur.execute(query, values)
+        results = cur.fetchall()
+        colum_names = [desc[0] for desc in cur.description]
+        results = pd.DataFrame(results, columns=colum_names)
+        return results
+
+
+# Update table data
+def update_table(table_name, update_dict, where_dict):
+    update_clause = ", ".join([f"{k} = %s" for k in update_dict.keys()])
+    where_clause = " AND ".join([f"{k} = %s" for k in where_dict.keys()])
+    query = f"UPDATE {table_name} SET {update_clause} WHERE {where_clause}"
+    values = list(update_dict.values()) + list(where_dict.values())
+    with conn.cursor() as cur:
+        cur.execute(query, values)
 
 
 # Decode serialized vector into real number array
@@ -46,27 +68,56 @@ def decode_vector(string_vec):
 
 conn = init_connection()
 
-
-# User Data
+"""
+Displaying User data
+"""
 st.markdown("# User Data")
 
 # query asks
-resps = run_query("SELECT user_name, password, embeddings from users;", conn)
-resps["embeddings"] = resps["embeddings"].apply(decode_vector)
+results = select_table(
+    "users", column_list=None, where_dict=None, order_by="user_id ASC"
+)
+results["embeddings"] = results["embeddings"].apply(decode_vector)
 
 # Print results.
-st.dataframe(resps[:10])
+st.dataframe(results)
 
 
-# Wine Data
+"""
+Displaying Wine data
+"""
 st.markdown("# Wine Data")
 
 # query asks
-resps = run_query(
-    "SELECT wine_name, wine_type, continent, country, embeddings from wines;", conn
+results = select_table(
+    "wines",
+    column_list=["wine_name", "wine_type", "continent", "country", "embeddings"],
+    where_dict=None,
+    order_by="wine_id ASC",
 )
-resps["wine_type"] = resps["wine_type"].apply(lambda x: "White" if x else "Red")
-resps["embeddings"] = resps["embeddings"].apply(decode_vector)
+results["wine_type"] = results["wine_type"].apply(lambda x: "White" if x else "Red")
+results["embeddings"] = results["embeddings"].apply(decode_vector)
 
 # Print results.
-st.dataframe(resps[:10])
+st.dataframe(results)
+
+
+"""
+Updating User data
+"""
+st.markdown("# Update user 1")
+
+# query asks
+update_dict = {"user_name": "내맘대로할거야", "password": 'unholy'}
+where_dict = {"user_id": 1}
+update_table("users", update_dict, where_dict)
+
+
+where_dict = {"user_id": 1}
+results = select_table(
+    "users", column_list=None, where_dict=None, order_by="user_id ASC"
+)
+results["embeddings"] = results["embeddings"].apply(decode_vector)
+
+# Print results.
+st.dataframe(results)
