@@ -10,7 +10,6 @@ st.set_page_config(
     page_icon="👋",
 )
 
-
 @st.cache_data
 def fetch_wine(url):
     image = Image.open(requests.get(url, stream=True).raw)
@@ -27,6 +26,7 @@ with tcol2:
 
 
 st.subheader("000, your current location is 0000")  #### user id, user 주소
+# st.subheader("{}, your current location is {}".format(name, location))  #### user id, user 주소
 
 st.write(" ")
 
