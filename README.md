@@ -13,6 +13,7 @@ pip install -r requirements.txt
 │   ├── 2_🌎_map.py
 │   └── 3_🍷_wine.py
 ├── Main.py
+├── db.py
 ├── requirements.txt
 ├── .gitignore
 └── README.md
@@ -20,5 +21,5 @@ pip install -r requirements.txt
 
 # Quick Start
 ```Shell
-python pages/Main.py
+streamlit run Main.py
 ```

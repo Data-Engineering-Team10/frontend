@@ -10,7 +10,7 @@ def init_connection():
     """ Initialize connection. Uses st.cache_resource to only run once
 
     Returns:
-        Connect: database connection
+        (Connect): database connection
     """
     return psycopg2.connect(**st.secrets["postgres"])
 
@@ -25,8 +25,7 @@ def select_table(table_name, column_list=None, where_dict=None, order_by=None):
         order_by (str, optional): ordering strategy. Defaults to None.
 
     Returns:
-        results: query result.
-        columns: columns of result.
+        query_result (pd.DataFrame): query result.
     """
 
     if column_list is None:
@@ -45,12 +44,8 @@ def select_table(table_name, column_list=None, where_dict=None, order_by=None):
     if order_by is not None:
         query += f" ORDER BY {order_by}"
 
-    with init_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(query, values)
-            results = cur.fetchall()
-            columns = [desc[0] for desc in cur.description]
-            return results, columns
+    query_result = run_query(query, values)
+    return query_result
 
 
 def update_table(table_name, update_dict, where_dict):
@@ -60,19 +55,71 @@ def update_table(table_name, update_dict, where_dict):
         table_name (str): database table name
         update_dict (dict): {column name: value}
         where_dict (dict): {column name: value}
+
+    Returns:
+        query_result (pd.DataFrame): query result.
     """
     update_clause = ", ".join([f"{k} = %s" for k in update_dict.keys()])
     where_clause = " AND ".join([f"{k} = %s" for k in where_dict.keys()])
     query = f"UPDATE {table_name} SET {update_clause} WHERE {where_clause}"
     values = list(update_dict.values()) + list(where_dict.values())
+    query += " RETURNING *"
+    
+    query_result = run_query(query, values)
+    return query_result
 
-    with init_connection() as conn:
-        with conn.cursor() as cur:
-            cur.execute(query, values)
 
+def insert_table(table_name, row_dict):
+    """ Insert data into database table
+
+    Args:
+        table_name (str): database table name
+        row_dict (dict): {column name: value}
+
+    Returns:
+        query_result (pd.DataFrame): query result.
+    """
+    columns_clause = ', '.join(row_dict.keys())
+    values_clause = ', '.join(['%s'] * len(row_dict))
+    query = f"INSERT INTO {table_name} ({columns_clause}) VALUES ({values_clause})"
+    values = tuple(row_dict.values())
+    query += " RETURNING *"
+
+    query_result = run_query(query, values)
+    return query_result
+
+
+def run_query(query, values):
+    """ Run query. If exception occurs, then raise exception once again
+    to detect query is effective.
+
+    Args:
+        query (str): query clause
+        values (Sequence): values
+
+    Raises:
+        e (Exception): If exception occurs, then raise exception once again.
+
+    Returns:
+        query_result (pd.DataFrame): query result.
+    """
+    try:
+        with init_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(query, values)
+                results = cur.fetchone()
+                columns = [desc[0] for desc in cur.description]
+                query_result = {c: [r] for c, r in zip(columns, results)}
+                query_result = convert(query_result)
+                query_result['embeddings'] = query_result['embeddings'].apply(decode_vector)
+            return query_result
+    except Exception as e:
+        # TODO: 예외처리 다양화
+        raise e
+    
 
 @st.cache_data
-def convert(results, columns):
+def convert(results):
     """ Transform query into pd.DataFrame
 
     Args:
@@ -82,7 +129,7 @@ def convert(results, columns):
     Returns:
         pd.DataFrame: query data frame
     """
-    return pd.DataFrame(results, columns=columns)
+    return pd.DataFrame(results)
 
 
 @st.cache_data
@@ -95,9 +142,17 @@ def decode_vector(string_vec):
     Returns:
         np.array: real number vector
     """
-    # base85 문자열을 byte 타입으로 디코딩
-    v_decode = base64.b85decode(string_vec)
+    embeddings = base64.b85decode(string_vec)
+    embeddings = np.frombuffer(embeddings, dtype=np.float32)
+    return embeddings
 
-    # random_v 와 동일한 vector로 복원
-    original_v = np.frombuffer(v_decode, dtype=np.float32)
-    return original_v
+
+def get_embedding_vector():
+    """ Encode real number vector into serialized vector
+
+    Returns:
+        np.array: serialized vector
+    """
+    embeddings = np.float32(np.random.random(256)).tobytes()
+    embeddings = base64.b85encode(embeddings).decode()
+    return embeddings

@@ -1,7 +1,6 @@
 import streamlit as st
-from db import select_table, update_table, decode_vector
+from db import select_table, update_table, insert_table, get_embedding_vector
 from streamlit_extras.let_it_rain import rain
-import time
 
 
 st.set_page_config(
@@ -20,21 +19,20 @@ def login_page():
     with col1:
         login_button = st.button("Login")
     with col2:
-        signup_button = st.button("Sign Up")
+        signup_button = st.button("Sign Up", key='login page')
 
     # Check if the username and password are correct
     if login_button:
-        results, columns = select_table(
-            "users", where_dict={'user_name': username, 'password': password}
-        )
-
         # If correct, change it to main page. Otherwise, warning pops up.
-        if results:
+        try:
+            query_result = select_table("users", where_dict={'user_name': username, 'password': password})
             st.write("<h1 style='text-align:center'>Welcome, {}!</h1>".format(username), unsafe_allow_html=True)
             st.write("<p style='text-align:center'>You have successfully logged in.</p>", unsafe_allow_html=True)
             st.write("<p style='text-align:center'>Enjoy your wine!</p>", unsafe_allow_html=True)
+            
             st.session_state['login_flag'] = 'login'
-        else:
+            st.session_state['profile'] = query_result
+        except Exception as e:
             st.warning("Incorrect username or password")
 
     if signup_button:
@@ -48,9 +46,6 @@ def signup_page():
     email = st.text_input("Email", placeholder="newjeanszzang@gm.gist.ac.kr")
     number = st.text_input("Phone Number", placeholder="010-1234-1234")
     password = st.text_input("Password", type="password")
-    confirm_password = st.text_input("Confirm Password", type="password")
-    if password != confirm_password:
-        st.warning("Passwords do not match. Please enter matching passwords.")
     address = st.selectbox("Address", ("쌍암동", "오룡동"))
 
     # Wine type
@@ -86,31 +81,42 @@ def signup_page():
     # Buttons
     col1, col2 = st.columns([9, 1])
     with col1:
-        signup_button = st.button("Sign Up")
+        signup_button = st.button("Sign Up", key='signup page')
     with col2:
-        logout_button = st.button("Back")
+        back_button = st.button("Back")
 
-    # TODO: Sign up 만들기, Insert 만들기
+    # Check if the password and confirm password match
     if signup_button:
-        # Check if the password and confirm password match
-        if password:
-            # rain(
-            #     emoji="✨",
-            #     font_size=54,
-            #     falling_speed=2,
-            #     animation_length="infinite",
-            # )
-            # st.balloons()
+        try:
+            row_dict = {'user_name': name,
+                        'password': password,
+                        'embeddings': get_embedding_vector()}
+            query_result = insert_table("users", row_dict)
+
+            rain(emoji="✨", font_size=54, falling_speed=2, animation_length="infinite")
             st.write("<h1 style='text-align:center'>Welcome, {}!</h1>".format(name), unsafe_allow_html=True)
             st.write("<p style='text-align:center'>You have successfully signed up.</p>", unsafe_allow_html=True)
-            time.sleep(6)
-            st.session_state['login_flag'] = 'login'
 
-    if logout_button:
+            st.session_state['login_flag'] = 'login'
+            st.session_state['profile'] = query_result
+        except Exception as e:
+            # TODO: 유저 테이블 구현하고 예외처리 다양화
+            st.warning(e)
+
+    if back_button:
         st.session_state['login_flag'] = 'logout'
+
+
+# TODO: 메인페이지 구현
+def main_page():
+    st.markdown('# main page')
+
 
 st.session_state.setdefault('login_flag', 'logout')
 if st.session_state['login_flag'] == 'logout':
     login_page()
 elif st.session_state['login_flag'] == 'signup':
     signup_page()
+elif st.session_state['login_flag'] == 'login':
+    main_page()
+
