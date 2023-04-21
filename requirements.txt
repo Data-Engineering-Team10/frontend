@@ -5,3 +5,4 @@ streamlit-extras==0.2.7
 folium==0.14.0
 psycopg2==2.9.6
 pytorch
+scikit-learn
