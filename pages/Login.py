@@ -1,5 +1,5 @@
 import streamlit as st
-import psycopg2-binary
+import psycopg2
 import pandas as pd
 from streamlit_extras.switch_page_button import switch_page
 
