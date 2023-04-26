@@ -8,11 +8,10 @@ pip install -r requirements.txt
 # Structure
 ```
 데이터엔지니어링이에용/
+├── 1_🏠_Main.py
 ├── pages/
-│   ├── 1_🏠_home.py
-│   ├── 2_🌎_map.py
-│   └── 3_🍷_wine.py
-├── Main.py
+│   ├── 2_🍷_Home.py
+│   └── 3_🌎_Map.py
 ├── db.py
 ├── requirements.txt
 ├── .gitignore
