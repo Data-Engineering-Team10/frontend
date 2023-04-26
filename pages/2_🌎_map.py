@@ -5,7 +5,13 @@ from streamlit_folium import st_folium, folium_static
 import random
 import math
 import numpy as np
+from db import *
 
+
+# st.set_page_config(
+#     page_title="Hello",
+#     layout='wide'
+# )
 
 # TODO : TOY MARKET DB 에서 가져오기, 지금은 임시로 대충 해놓음
 
@@ -17,22 +23,21 @@ min_price_range = [98.9, 98.7, 98.3, 98, 97.8, 96, 95, 94, 90]
 
 select = random.randrange(0, 10)
 
+df_wine = select_table('wines')
+
 def main_page():
 
     col1, col2 = st.columns([4,3])
 
     with col1:
         st.title('Which wine are you looking for?🍷')
-        code = st.text_input(
-            'Search anything!',
-            value='',
-            placeholder='Wine'
-        ) 
+        wine = st.selectbox('', (df_wine['wine_name']), label_visibility='collapsed')
+        wine_idx = df_wine[df_wine['wine_name'] == wine].index
 
         if st.button('Search'):
-            if code.strip():  # 코드 입력란에 공백이 아닌 문자가 입력되었을 경우
+            if wine.strip():  # 코드 입력란에 공백이 아닌 문자가 입력되었을 경우
                 with col2:
-                    search_page(code)
+                    search_page(wine)
             else:
                 st.error('Please enter a valid search term.')  # 코드 입력란에 공백이 입력되었을 경우 에러 메시지 출력
 
@@ -90,12 +95,15 @@ def main_page():
         
     if st.button('MARKET A'):
         st.session_state['main_page'] = 'page1'
+        st.dataframe(wine_info[['name','cost']][0:18])
             
     if st.button('MARKET B'):
         st.session_state['main_page'] = 'page2'
-
+        st.dataframe(wine_info[['name','cost']][18:30])
+        
     if st.button('MARKET C'):
         st.session_state['main_page'] = 'page3'
+        st.dataframe(wine_info[['name','cost']][30:60])
 
 mins = 90.0
 maxs = 101.2

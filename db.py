@@ -107,30 +107,16 @@ def run_query(query, values):
         with init_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute(query, values)
-                results = cur.fetchone()
+                results = cur.fetchall()
                 columns = [desc[0] for desc in cur.description]
-                query_result = {c: [r] for c, r in zip(columns, results)}
-                query_result = convert(query_result)
-                query_result['embeddings'] = query_result['embeddings'].apply(decode_vector)
+                query_result = pd.DataFrame(results, columns=columns)
+                if 'embeddings' in query_result:
+                    query_result['embeddings'] = query_result['embeddings'].apply(decode_vector)
             return query_result
     except Exception as e:
         # TODO: 예외처리 다양화
         raise e
     
-
-@st.cache_data
-def convert(results):
-    """ Transform query into pd.DataFrame
-
-    Args:
-        results (query): database query
-        columns (list): column list
-
-    Returns:
-        pd.DataFrame: query data frame
-    """
-    return pd.DataFrame(results)
-
 
 @st.cache_data
 def decode_vector(string_vec):
@@ -147,12 +133,12 @@ def decode_vector(string_vec):
     return embeddings
 
 
-def get_embedding_vector():
+def encode_vector(vector):
     """ Encode real number vector into serialized vector
 
     Returns:
         np.array: serialized vector
     """
-    embeddings = np.float32(np.random.random(256)).tobytes()
+    embeddings = np.float32(vector).tobytes()
     embeddings = base64.b85encode(embeddings).decode()
     return embeddings
