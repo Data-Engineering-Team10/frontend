@@ -1,6 +1,4 @@
 import streamlit as st
-import sys,os
-sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 from db import select_table, update_table, insert_table, get_embedding_vector
 from streamlit_extras.let_it_rain import rain
 
