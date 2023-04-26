@@ -9,9 +9,9 @@ pip install -r requirements.txt
 ```
 데이터엔지니어링이에용/
 ├── pages/
-│   ├── 1_🏠_home.py
-│   ├── 2_🌎_map.py
-│   └── 3_🍷_wine.py
+│   ├── 1_🏠_Main.py
+│   ├── 2_🍷_Home.py
+│   └── 3_🌎_Map.py
 ├── Main.py
 ├── db.py
 ├── requirements.txt
