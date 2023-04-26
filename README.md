@@ -12,7 +12,6 @@ pip install -r requirements.txt
 ├── pages/
 │   ├── 2_🍷_Home.py
 │   └── 3_🌎_Map.py
-├── Main.py
 ├── db.py
 ├── requirements.txt
 ├── .gitignore
