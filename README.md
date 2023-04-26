@@ -13,6 +13,8 @@ pip install -r requirements.txt
 │   ├── 2_🍷_Home.py
 │   └── 3_🌎_Map.py
 ├── db.py
+├── models.py
+├── wine_model.pt
 ├── requirements.txt
 ├── .gitignore
 └── README.md
@@ -20,5 +22,5 @@ pip install -r requirements.txt
 
 # Quick Start
 ```Shell
-streamlit run Main.py
+streamlit run 1_🏠_Main.py
 ```
